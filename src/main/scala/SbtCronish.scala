@@ -5,8 +5,21 @@ import complete.DefaultParsers._
 
 import com.github.philcali.cronish.dsl._
 
-object SbtCronish extends Plugin {
- 
+object CronishKeys {
+  val Cronish = config("cronish") 
+
+  val tasks = SettingKey[Seq[Scheduled]]("tasks", "Actively defined crons.")
+  val list = TaskKey[Unit]("list", "Lists all the active tasks")
+
+  val addSh = InputKey[Unit]("add-sh", 
+              "Adds a cronish task that executes a system command.")
+  val addSbt = InputKey[Unit]("add-sbt",
+              "Adds a sbt task to be executed at a defined interval.")
+}
+
+object CronishPlugin extends Plugin {
+  import CronishKeys._
+
   object add {
     def > (work: ProcessBuilder) = 
       job (work !) describedAs "process %s".format(work)
@@ -17,9 +30,6 @@ object SbtCronish extends Plugin {
     } describedAs "sbt action %s".format(cmd)
   }
 
-  val cronishTasks = SettingKey[Seq[Scheduled]]("cronish-tasks", "Actively defined crons.")
-
-  val cronishList = TaskKey[Unit]("cronish-list", "Lists all the active tasks")
   private def cronishListTask = (streams) map { s =>
     Scheduled.active.foreach { sched =>
       val desc = sched.task.description match {
@@ -29,12 +39,6 @@ object SbtCronish extends Plugin {
       s.log.info("%s runs %s" format (desc, sched.definition.full))
     }
   }
-
-  val cronishAddSh = InputKey[Unit]("cronish-add-sh", 
-              "Adds a cronish task that executes a system command.")
-
-  val cronishAddSbt = InputKey[Unit]("cronish-add-sbt",
-              "Adds a sbt task to be executed at a defined interval.")
 
   private val cronishAddDef = (parsedTask: TaskKey[(String, Seq[Char])]) => {
     (parsedTask, state, streams) map { case ( (es, crons), st, s ) =>
@@ -56,26 +60,26 @@ object SbtCronish extends Plugin {
 
   override lazy val settings = 
     cronishSettings ++ Seq (
-      cronishList,
-      cronishAddSh,
-      cronishAddSbt
-    ).map (aggregate in _ := false )
+      list in Cronish,
+      addSh in Cronish,
+      addSbt in Cronish
+    ).map (aggregate in _ := false)
 
-  private val cronishSettings: Seq[Project.Setting[_]] = Seq (
-    cronishTasks := List[Scheduled](),
+  private val cronishSettings: Seq[Setting[_]] = inConfig(Cronish) (Seq (
+    tasks := List[Scheduled](),
  
-    cronishAddSh <<= inputTask { argTask =>
+    addSh <<= inputTask { argTask =>
       (argTask, streams) map { (args, s) =>
         val Array(cmd, crons) = args.mkString(" ").split(" runs ")
 
         add sh cmd runs crons
 
-        s.log.info("Successfully added task")
+        s.log.info("Successfully added %s to run %s".format(cmd, crons))
       }
     },
 
-    cronishAddSbt <<= InputTask(cronishParser)(cronishAddDef),
+    addSbt <<= InputTask(cronishParser)(cronishAddDef),
 
-    cronishList <<= cronishListTask
-  )
+    list <<= cronishListTask
+  ))
 }
