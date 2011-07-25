@@ -9,18 +9,21 @@ In your `project/plugins/build.sbt` definition, place the following line:
   
     libraryDependencies += "com.github.philcali" %% "cronish-sbt" % "0.0.2"
 
+The CronishPlugin.cronishSettings must be inlcuded manually either in your build.sbt
+or Build.scala.
+
 ## Cronish Tasks
 
 The important tasks in this regard being:
 
-    cronish-add-[sh|sbt] <command> runs <cronish>
+    cronish:add-[sh|sbt] <command> runs <cronish>
 
 An example of the two below.
 
-  1. `cronish-add-sh echo "Maybe you should get off now" runs every day at 5pm`
-  2. `cronish-add-sbt publish-local runs every Friday at midnight`
+  1. `cronish:add-sh echo "Maybe you should get off now" runs every day at 5pm`
+  2. `cronish:add-sbt publish-local runs every Friday at midnight`
 
-The `cronish-list` task will print out all the active runs for the session.
+The `cronish:list` task will print out all the active runs for the session.
 
 ## Convenience Methods
 
@@ -37,6 +40,8 @@ interject interval commands in both settings and tasks. Let's pretend
 you wanted to inject a `publish-local` interval automatically, after
 your first update.
 
+    import CronishPlugin._
+
     val publishNightly= TaskKey[Unit]("publish-nightly")
 
     override val settings = Seq (
@@ -49,11 +54,13 @@ your first update.
 
 ## Initializing Cronish Tasks 
 
-You can use the `cronishTasks` setting to configure cronish tasks upon
+You can use the `tasks in CronishConf` setting to configure cronish tasks upon
 initialization. Because this is a setting, you are limited to shell
 commands, and `ProcessBuilder`s. Here's an example:
 
-    cronishTasks := Seq (
+    import CronishPlugin._
+
+    tasks in CronishConf := Seq (
       add sh "echo Take a break, dude" runs hourly,
       add > "wget http://google.com" #> new File("google.html") runs daily,
       job ("echo get off dude" !) runs "every day at 5pm"
