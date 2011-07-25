@@ -6,7 +6,15 @@ import complete.DefaultParsers._
 import com.github.philcali.cronish.dsl._
 
 object CronishPlugin extends Plugin {
-  import CronishKeys._
+  val CronishConf = config("cronish") 
+
+  val tasks = SettingKey[Seq[Scheduled]]("tasks", "Actively defined crons.")
+  val list = TaskKey[Unit]("list", "Lists all the active tasks")
+
+  val addSh = InputKey[Unit]("add-sh", 
+              "Adds a cronish task that executes a system command.")
+  val addSbt = InputKey[Unit]("add-sbt",
+              "Adds a sbt task to be executed at a defined interval.")
 
   object add {
     def > (work: ProcessBuilder) = 
@@ -48,12 +56,12 @@ object CronishPlugin extends Plugin {
 
   override lazy val settings = 
     cronishSettings ++ Seq (
-      list in Cronish,
-      addSh in Cronish,
-      addSbt in Cronish
+      list in CronishConf,
+      addSh in CronishConf,
+      addSbt in CronishConf
     ).map (aggregate in _ := false)
 
-  private val cronishSettings: Seq[Setting[_]] = inConfig(Cronish) (Seq (
+  private val cronishSettings: Seq[Setting[_]] = inConfig(CronishConf) (Seq (
     tasks := List[Scheduled](),
  
     addSh <<= inputTask { argTask =>
