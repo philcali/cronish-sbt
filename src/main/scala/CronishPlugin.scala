@@ -54,14 +54,7 @@ object CronishPlugin extends Plugin {
     }
   }
 
-  override lazy val settings = 
-    cronishSettings ++ Seq (
-      list in CronishConf,
-      addSh in CronishConf,
-      addSbt in CronishConf
-    ).map (aggregate in _ := false)
-
-  private val cronishSettings: Seq[Setting[_]] = inConfig(CronishConf) (Seq (
+  val cronishSettings: Seq[Setting[_]] = inConfig(CronishConf) (Seq (
     tasks := List[Scheduled](),
  
     addSh <<= inputTask { argTask =>
@@ -77,5 +70,9 @@ object CronishPlugin extends Plugin {
     addSbt <<= InputTask(cronishParser)(cronishAddDef),
 
     list <<= cronishListTask
-  ))
+  )) ++ Seq (
+    list in CronishConf,
+    addSh in CronishConf,
+    addSbt in CronishConf
+  ).map (aggregate in _ := false)
 }
