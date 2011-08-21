@@ -7,7 +7,7 @@ sbt task execution and / or shell execution.
 
 In your `project/plugins/build.sbt` definition, place the following line:
   
-    libraryDependencies += "com.github.philcali" %% "cronish-sbt" % "0.0.2"
+    libraryDependencies += "com.github.philcali" %% "cronish-sbt" % "0.0.3"
 
 The CronishPlugin.cronishSettings must be inlcuded manually either in your build.sbt
 or Build.scala.
