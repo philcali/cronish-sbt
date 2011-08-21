@@ -9,12 +9,17 @@ object CronishPlugin extends Plugin {
   val CronishConf = config("cronish") 
 
   val tasks = SettingKey[Seq[Scheduled]]("tasks", "Actively defined crons.")
+
   val list = TaskKey[Unit]("list", "Lists all the active tasks")
 
   val addSh = InputKey[Unit]("add-sh", 
               "Adds a cronish task that executes a system command.")
+
   val addSbt = InputKey[Unit]("add-sbt",
               "Adds a sbt task to be executed at a defined interval.")
+
+  val findNext = TaskKey[Unit]("next",
+              "Iterates through active jobs and prints out next job.")
 
   object add {
     def > (work: ProcessBuilder) = 
@@ -27,13 +32,20 @@ object CronishPlugin extends Plugin {
   }
 
   private def cronishListTask = (streams) map { s =>
-    Scheduled.active.foreach { sched =>
-      val desc = sched.task.description match {
-        case Some(str) => str
-        case _ => "A job that"
-      }
-      s.log.info("%s runs %s" format (desc, sched.definition.full))
+    Scheduled.active.map(fullReport).foreach(s.log.info(_))
+  }
+
+  private def fullReport(sched: Scheduled) = {
+    val desc = sched.task.description match {
+      case Some(str) => str
+      case _ => "A job that"
     }
+
+    val crondef = sched.definition.full      
+
+    val at = sched.definition.nextTime
+
+    "%s runs %s next run: %s" format(desc, crondef, at)
   }
 
   private val cronishAddDef = (parsedTask: TaskKey[(String, Seq[Char])]) => {
@@ -69,10 +81,23 @@ object CronishPlugin extends Plugin {
 
     addSbt <<= InputTask(cronishParser)(cronishAddDef),
 
-    list <<= cronishListTask
+    list <<= cronishListTask,
+
+    findNext <<= (streams) map { s => 
+      val jobs = Scheduled.active
+
+      val trans = (d: Scheduled) => d.definition.nextTime
+
+      val attempt = jobs.sortWith(trans(_) < trans(_)).headOption
+
+      val report = attempt.map(fullReport).getOrElse("No jobs")
+
+      s.log.info(report)
+    }
   )) ++ Seq (
     list in CronishConf,
     addSh in CronishConf,
-    addSbt in CronishConf
+    addSbt in CronishConf,
+    findNext in CronishConf
   ).map (aggregate in _ := false)
 }
