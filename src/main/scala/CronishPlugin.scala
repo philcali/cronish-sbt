@@ -3,23 +3,24 @@ import sbt._
 import Keys._
 import complete.DefaultParsers._
 
-import com.github.philcali.cronish.dsl._
+import cronish.dsl._
 
 object CronishPlugin extends Plugin {
-  val CronishConf = config("cronish") 
 
-  val tasks = SettingKey[Seq[Scheduled]]("tasks", "Actively defined crons.")
+  object cronish {
+    val tasks = SettingKey[Seq[Scheduled]]("cronish-tasks", "Actively defined crons.")
 
-  val list = TaskKey[Unit]("list", "Lists all the active tasks")
+    val list = TaskKey[Unit]("cronish-list", "Lists all the active tasks")
 
-  val addSh = InputKey[Unit]("add-sh", 
-              "Adds a cronish task that executes a system command.")
+    val addSh = InputKey[Unit]("cronish-add-sh", 
+                "Adds a cronish task that executes a system command.")
 
-  val addSbt = InputKey[Unit]("add-sbt",
-              "Adds a sbt task to be executed at a defined interval.")
+    val addSbt = InputKey[Unit]("cronish-add-sbt",
+                "Adds a sbt task to be executed at a defined interval.")
 
-  val findNext = TaskKey[Unit]("next",
-              "Iterates through active jobs and prints out next job.")
+    val next = TaskKey[Unit]("cronish-next",
+                "Iterates through active jobs and prints out next job.")
+  }
 
   object add {
     def > (work: ProcessBuilder) = 
@@ -66,10 +67,10 @@ object CronishPlugin extends Plugin {
     }
   }
 
-  val cronishSettings: Seq[Setting[_]] = inConfig(CronishConf) (Seq (
-    tasks := List[Scheduled](),
+  val cronishSettings: Seq[Setting[_]] = Seq (
+    cronish.tasks := List[Scheduled](),
  
-    addSh <<= inputTask { argTask =>
+    cronish.addSh <<= inputTask { argTask =>
       (argTask, streams) map { (args, s) =>
         val Array(cmd, crons) = args.mkString(" ").split(" runs ")
 
@@ -79,11 +80,11 @@ object CronishPlugin extends Plugin {
       }
     },
 
-    addSbt <<= InputTask(cronishParser)(cronishAddDef),
+    cronish.addSbt <<= InputTask(cronishParser)(cronishAddDef),
 
-    list <<= cronishListTask,
+    cronish.list <<= cronishListTask,
 
-    findNext <<= (streams) map { s => 
+    cronish.next <<= (streams) map { s => 
       val jobs = Scheduled.active
 
       val trans = (d: Scheduled) => d.definition.nextTime
@@ -93,11 +94,11 @@ object CronishPlugin extends Plugin {
       val report = attempt.map(fullReport).getOrElse("No jobs")
 
       s.log.info(report)
-    }
-  )) ++ Seq (
-    list in CronishConf,
-    addSh in CronishConf,
-    addSbt in CronishConf,
-    findNext in CronishConf
-  ).map (aggregate in _ := false)
+    },
+
+    aggregate in cronish.list := false,
+    aggregate in cronish.addSh := false,
+    aggregate in cronish.addSbt := false,
+    aggregate in cronish.next := false
+  )
 }
