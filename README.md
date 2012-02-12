@@ -8,7 +8,7 @@ sbt task execution and / or shell execution.
 In your `project/plugins/build.sbt` definition, place the following line:
 
 ```
-addSbtPlugin("com.github.philcali" % "cronish-sbt" % "0.1.0")
+addSbtPlugin("com.github.philcali" % "cronish-sbt" % "0.1.1")
 ```
 
 The CronishPlugin.cronishSettings must be inlcuded manually either in your build.sbt
